@@ -1,11 +1,17 @@
+#!/usr/bin/python3
+from collections import Counter
+
 class Client:
     
     # private input set
-    client_set = {'a', 'b', 'c'}
+    # client_set = {0, 1, 1, 2}
     # size of the private input set
-    k = 3
-    def __init__(self):
+    k = 4
+    def __init__(self, multiset):
+       self._multiset = Counter(multiset)
+       self._k = multiset.size()
 
+    def polinom():
 
 def main():
     
