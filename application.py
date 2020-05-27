@@ -2,6 +2,10 @@
 import argparse
 from argparse import RawTextHelpFormatter
 from collections import Counter
+import http.client
+
+from multiset_operations import union
+from multiset_operations import intersection
 
 
 def get_polinomial(multiset, x):
@@ -14,6 +18,15 @@ def get_polinomial(multiset, x):
         print("value: " + str(multiplicity))
         polinomial *= pow((x - value), multiplicity)
     return polinomial
+
+
+def coeficients(multiset):
+    coeficients = []
+    polinomial = ""
+    counter_multiset = Counter(multiset)
+    for value in counter_multiset:
+        multiplicity = counter_multiset[value]
+        polinomial += ""
 
 
 def deg(multiset):
@@ -31,78 +44,118 @@ def calculate_polinomial_for_intersection(multiset, polinomial, x):
     return r
 
 
+def connect_ttp(operation, value):
+    PORT = 8000
+    #conn = http.client.HTTPSConnection("localhost", PORT)
+    conn = http.client.HTTPConnection("localhost", PORT)
+
+    conn.request("GET", "/" + operation + "?value=" + value)
+    #conn.request("GET", "/", "operation=" + operation)
+    response = conn.getresponse()
+
+    response_bytes = response.read()
+
+    print(response.status, response.reason)
+
+    conn.close()
+
+    return response_bytes
 
 
-#def connect_trusted_third_party():
+def ttp_union(value):
+    return connect_ttp("union", value)
 
-#def union():
 
-#def intersection():
+def ttp_intersection(value):
+    return connect_ttp("intersection", value)
 
-def local_union(multiset1, multiset2, x):
+
+# input : [0,1,1,2,3] [3,4,4,4,5]
+# r: [1,1,1,1,1]
+# s: [3,3,3,3,3]
+# value 2 : belongs ????
+# value 3: belongs
+
+# r: [1,1,1,1,1]
+# s: [3,3,3,3,3]
+# value 3: belongs
+
+# input : [0,1,5,2,3] [3,2,4,4,5]
+# r: [1,1,1,1,1]
+# s: [3,3,3,3,3]
+# value 2 : belongs
+# value 3: belongs
+# value 5: belongs
+"""
+def local_intersection(multiset1, multiset2, x):
     polinomial_f = get_polinomial(multiset1, x)
-    print("polinomial_f: " + str(polinomial1))
+    print("polinomial_f: " + str(polinomial_f))
     polinomial_g = get_polinomial(multiset2, x)
-    print("polinomial_g: " + str(polinomial2))
+    print("polinomial_g: " + str(polinomial_g))
 
-    return polinomial_f * polinomial_g
+    #polinomial_r = calculate_polinomial_for_intersection(multiset1, x)
+    polinomial_r = get_polinomial([1,1,1,1,1], x)
 
-
-def local_intersection(multiset1, multiset2):
-    polinomial_f = get_polinomial(multiset1, x)
-    print("polinomial_f: " + str(polinomial1))
-    polinomial_g = get_polinomial(multiset2, x)
-    print("polinomial_g: " + str(polinomial2))
-
-    polinomial_r = calculate_polinomial_for_intersection(multiset1, x)
-
-    polinomial_s = calculate_polinomial_for_intersection(multiset2, x)
+    #polinomial_s = calculate_polinomial_for_intersection(multiset2, x)
+    polinomial_s = get_polinomial([3,3,3,3,3], x)
     
     return polinomial_f * polinomial_r + polinomial_g * polinomial_s
+"""
+def local_union(multiset1, multiset2, x):
+    return union(multiset1, multiset2, x)
+
+
+def local_intersection(multiset1, multiset2, x):
+    return intersection(multiset1, multiset2, x)
 
 
 def main():
 
     description = 'Welcome to the Private Multiset Operations Interface!\n\
     Experiment this protocol with 2 clients and a Trusted Third Party.\n\
-    1. Start by submitting a multiset.\n\
+    1. Both clients should submit a multiset.\n\
     2. Choose between the following supported operations:\n\
     union                    Perform union operation between multisets\n\
-    intersection             Perform intersection operation between multisets\n\
-    3. Wait for other client to do the same\n'
+    intersection             Perform intersection operation between multisets\n\n\
+                            OR\n\n\
+    1. Perform local operations for testing:\n\
+    local_union              Test union operation between multisets\n\
+    local_intersection       Test intersection operation between multisets\n'
 
     usage = '\n\
-    application.py <command> [<args>]\n\
-    application.py multiset "<multiset>"\n\
-    application.py union\n\
-    application.py intersection\n\
-    application.py local_union "<multiset1>" "<multiset2>" "<value>""\n\
-    application.py local_intersection "<multiset1>" "<multiset2>" "<value>""\n'
+    python application.py <command> [<args>]\n\
+    python application.py union "<value>"\n\
+    python application.py intersection "<value>"\n\
+    python application.py local_union "<multiset1>" "<multiset2>" "<value>""\n\
+    python application.py local_intersection "<multiset1>" "<multiset2>" "<value>""\n'
 
     parser = argparse.ArgumentParser(prog='privacy_multiset', description=description,
                                      usage=usage, formatter_class=RawTextHelpFormatter)
-    parser.add_argument('command', type=str, choices=['multiset', 'union', 'intersection', 'local_union', 'local_intersection'])
+    parser.add_argument('command', type=str, choices=['union', 'intersection', 'local_union', 'local_intersection'])
     parser.add_argument('multiset_arg1', nargs='?')
     parser.add_argument('multiset_arg2', nargs='?')
     parser.add_argument('value', nargs='?')
 
     args = parser.parse_args()
 
-    if args.command.__eq__('multiset'):
-        if args.multiset_arg1:
-            multiset = args.multiset_arg1
+    if args.command.__eq__('union'):
+        value = args.multiset_arg1
+        result_bytes = ttp_union(value)
+        result = result_bytes.decode('utf-8')
+        if result == "0":
+            print("Value " + value + " belongs to the UNION; result is " + str(result))
         else:
-            parser.error('wrong arguments for multiset command')
-    elif args.command.__eq__('union'):
-        if multiset:
-            union(multiset)
-        else:
-            parser.error('no multiset defined')
+            print("Value " + value + " does not belong to the UNION; result is " + str(result))
+
     elif args.command.__eq__('intersection'):
-        if multiset:
-            intersection(multiset)
+        value = args.multiset_arg1
+        result_bytes = ttp_intersection(value)
+        result = result_bytes.decode('utf-8')
+        if result == "0":
+            print("Value " + value + " belongs to the UNION; result is " + str(result))
         else:
-            parser.error('no multiset defined')
+            print("Value " + value + " does not belong to the UNION; result is " + str(result))
+
     elif args.command.__eq__('local_union'):
         if args.multiset_arg1 and args.multiset_arg2 and args.value:
             multiset1 = map(int, args.multiset_arg1.strip('[]').split(','))
@@ -114,6 +167,7 @@ def main():
                 print("Value " + args.value + " does not belong to the UNION; result is " + str(result))
         else:
             parser.error('no multisets defined')
+
     elif args.command.__eq__('local_intersection'):
         if args.multiset_arg1 and args.multiset_arg2 and args.value:
             multiset1 = map(int, args.multiset_arg1.strip('[]').split(','))

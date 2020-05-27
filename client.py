@@ -1,21 +1,56 @@
 #!/usr/bin/python3
-from collections import Counter
+import http.client
+import json
+#import urllib.request
+#import urllib.parse
+import argparse
+from argparse import RawTextHelpFormatter
 
-class Client:
-    
-    # private input set
-    # client_set = {0, 1, 1, 2}
-    # size of the private input set
-    k = 4
-    def __init__(self, multiset):
-       self._multiset = Counter(multiset)
-       self._k = multiset.size()
+def submit(multiset):
+    PORT = 8000
+    #conn = http.client.HTTPSConnection("localhost", PORT)
+    conn = http.client.HTTPConnection("localhost", PORT)
 
-    def polinom():
+    # prepares json for POST
+    headers = {'Content-type': 'application/json'}
+    json_multiset = {'multiset': multiset}
+    json_data = json.dumps(json_multiset)
+
+    conn.request('POST', '/', json_data, headers)
+
+    #conn.request("GET", "/")
+    response = conn.getresponse()
+
+    print(response.status, response.reason)
+    print(response.read())
+
+    conn.close()
+
 
 def main():
     
-    client = Client()
+    description = 'Welcome to the Private Multiset Operations Client!\n\
+    Experiment this protocol with 2 clients and a Trusted Third Party.\n\
+    1. Submit a multiset.\n'
+
+    usage = '\n\
+    python client.py <command> [<args>]\n\
+    python client.py submit "<multiset>"\n'
+
+    parser = argparse.ArgumentParser(prog='client', description=description,
+                                     usage=usage, formatter_class=RawTextHelpFormatter)
+    parser.add_argument('command', type=str, choices=['submit'])
+    parser.add_argument('multiset_arg1', nargs='?')
+
+    args = parser.parse_args()
+
+    if args.command.__eq__('submit'):
+        if args.multiset_arg1:
+            print("Submitted multiset: " + args.multiset_arg1)
+            submit(args.multiset_arg1)
+        else:
+            parser.error('wrong arguments for submit command')
+
 
 if __name__ == "__main__":
     main()
