@@ -10,7 +10,6 @@ from multiset_operations import union
 from multiset_operations import intersection
 
 
-
 _multiset1 = ""
 _multiset2 = ""
 
@@ -85,12 +84,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         print("SUBMIT successful")
 
 
-
-
 def main():
     PORT = 8000
 
-    #httpd = socketserver.TCPServer(("http://127.0.0.1/submit", PORT), UnionHandler)
     httpd = socketserver.TCPServer(('localhost', PORT), RequestHandler)
 
     print("Trusted Third Party serving at port " + str(PORT))
