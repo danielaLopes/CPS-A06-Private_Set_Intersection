@@ -57,7 +57,7 @@ class Set_Intersection_Client:
 
         while n_received < self.n-1:
             data = conn.recv(4096)     
-            buffer.append(ast.literal_eval(data.decode('utf-8')))
+            buffer.append(Polynomial(ast.literal_eval(data.decode('utf-8'))))
             n_received += 1
         return buffer
 
@@ -86,11 +86,38 @@ class Set_Intersection_Client:
     def choose_r_polynomials(self):
         # TODO: i dont know how to do this
         self.r_polynomials = []
+        #for i in (0, self.c):
+        self.append(get_polinomial([0,0]))
+        #self.append(get_polinomial([1,1]))
     
     # 1.d)
-    def compute_polynomial(self):
-        
-        
+    def compute_phi_polynomial(self):
+        # TODO: this is wrong
+        for r in self.r_polynomials:
+            self.phi_polynomial = .multiplication(r)
+
+    # 2. and 3.
+    def send_phi_polynomial(self):
+        # 2.
+        if self.i == 1:
+            # client 1 is the first to send polynomials
+            self.broadcast(str(self.phi_polynomial.coefficients))
+            self.other_lambda_polynomials = self.receive()
+        # 3.
+        elif self.i == 2: 
+            # client 2 first receives polynomials from client1 and then sends its own
+            self.other_phi_polynomials = self.receive()
+            self.sum_lambda_phi_polynomials()
+            # TODO: change this in case of more clients
+            self.broadcast(str(self.phi.coefficients))
+
+        print("self.other_phi_polynomials: " + str(self.other_phi_polynomials))
+
+    # 3.b)
+    def sum_lambda_phi_polynomials(self):
+        self.lambda_polynomial = self.other_lambda_polynomial.sum(self.phi_polynomial)
+    # 3.c)
+    def send_phi_polynomial(self):
             
 
 
@@ -137,9 +164,10 @@ def main():
 
     input("Press enter to continue: ")
     client.choose_r_polynomials()
-    client.compute_polynomial()
+    client.compute_phi_polynomial()
 
     input("Press enter to continue: ")
+    client.send_phi_polynomial()
 
 if __name__ == "__main__":
     main()
