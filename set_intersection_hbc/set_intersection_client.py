@@ -1,10 +1,12 @@
 #!/usr/bin/python3
-import http.client
+import socket
 import json
 #import urllib.request
 #import urllib.parse
 import argparse
 from argparse import RawTextHelpFormatter
+import os
+import ast 
 
 # import library in a different directory
 import sys
@@ -22,22 +24,42 @@ class Set_Intersection_Client:
         self.c = c
         self.port = 8000 + i
 
-        self.other_ports = []
-        for client_id in range(i+1, i+(n-i)):
-            self.other_ports.append(8000 + client_id)
+        self.other_ports= []
+        self.sockets = []
+        for client_id in range(1, self.n + 1):
+            if client_id != self.i:
+                self.other_ports.append(8000 + client_id)
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                #sock.connect(('127.0.0.1', 8000 + client_id))
+                self.sockets.append(sock)
+            else:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 )
+                sock.bind(('127.0.0.1', self.port))
+                self.socket = sock
 
-    def send_message():
-        conn = http.client.HTTPConnection("localhost", PORT)
+    def broadcast(self, toSend):
+        for (sock,port) in zip(self.sockets,self.other_ports):
+            sock.connect(('127.0.0.1', port))
+            sock.send(toSend.encode("utf-8"))
 
-        # prepares json for POST
-        headers = {'Content-type': 'application/json'}
-        json_multiset = {'multiset': multiset}
-        json_data = json.dumps(json_multiset)
+    def receive(self):
+        self.socket.listen(5)
+        print("waiting to receive data...")
+        #try:
+        conn, addr = self.socket.accept()
+        #except KeyboardInterrupt:
+            #print("exiting")
+            #os._exit()  
+        n_received = 0
+        buffer = []
 
-        conn.request('POST', '/', json_data, headers)
-
-        #conn.request("GET", "/")
-    response = conn.getresponse()
+        while n_received < self.n-1:
+            data = conn.recv(4096)     
+            buffer.append(ast.literal_eval(data.decode('utf-8')))
+            n_received += 1
+        return buffer
 
     # 1.a)
     def create_polynomial(self):
@@ -47,13 +69,27 @@ class Set_Intersection_Client:
 
     # 1.b)
     def send_multiset_polynomial(self):
+        # TODO: needs adaptations to work with more clients
         if self.i == 1:
             # client 1 is the first to send polynomials
-            for port in self.other_ports:
+            self.broadcast(str(self.polynomial.coefficients))
+            self.other_polynomials = self.receive()   
+        elif self.i == 2: 
+            # client 2 first receives polynomials from client1 and then sends its own
+            self.other_polynomials = self.receive()
+            self.broadcast(str(self.polynomial.coefficients))
+
+        print("self.other_polynomials: " + str(self.other_polynomials))
 
 
     # 1.c)
     def choose_r_polynomials(self):
+        # TODO: i dont know how to do this
+        self.r_polynomials = []
+    
+    # 1.d)
+    def compute_polynomial(self):
+        
         
             
 
@@ -65,27 +101,6 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
     def __init__(self, i, n, c):
         super(Encrypted_Set_Intersection_Client, self).__init__(i, n, c)
         print(self.i)
-
-
-def submit(multiset):
-    PORT = 8000
-    #conn = http.client.HTTPSConnection("localhost", PORT)
-    conn = http.client.HTTPConnection("localhost", PORT)
-
-    # prepares json for POST
-    headers = {'Content-type': 'application/json'}
-    json_multiset = {'multiset': multiset}
-    json_data = json.dumps(json_multiset)
-
-    conn.request('POST', '/', json_data, headers)
-
-    #conn.request("GET", "/")
-    response = conn.getresponse()
-
-    print(response.status, response.reason)
-    print(response.read())
-
-    conn.close()
 
 
 def main():
@@ -117,7 +132,14 @@ def main():
         parser.error('wrong command')
 
     client.create_polynomial()
+    input("Press enter to continue: ")
+    client.send_multiset_polynomial()
 
+    input("Press enter to continue: ")
+    client.choose_r_polynomials()
+    client.compute_polynomial()
+
+    input("Press enter to continue: ")
 
 if __name__ == "__main__":
     main()
