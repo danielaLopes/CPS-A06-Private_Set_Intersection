@@ -22,10 +22,40 @@ class Set_Intersection_Client:
         self.c = c
         self.port = 8000 + i
 
+        self.other_ports = []
+        for client_id in range(i+1, i+(n-i)):
+            self.other_ports.append(8000 + client_id)
+
+    def send_message():
+        conn = http.client.HTTPConnection("localhost", PORT)
+
+        # prepares json for POST
+        headers = {'Content-type': 'application/json'}
+        json_multiset = {'multiset': multiset}
+        json_data = json.dumps(json_multiset)
+
+        conn.request('POST', '/', json_data, headers)
+
+        #conn.request("GET", "/")
+    response = conn.getresponse()
+
+    # 1.a)
     def create_polynomial(self):
         # multiset should be in the format "[0,1,1,2,3]"
-        client_input = input("Submit a multiset in the format \"[a1,...,ak]\": ")
-        polynomial = get_polinomial(map(int, client_input.strip('[]').split(',')))
+        client_input = input("Submit a multiset in the format [a1,...,ak]: ")
+        self.polynomial = get_polinomial(map(int, client_input.strip('[]').split(',')))
+
+    # 1.b)
+    def send_multiset_polynomial(self):
+        if self.i == 1:
+            # client 1 is the first to send polynomials
+            for port in self.other_ports:
+
+
+    # 1.c)
+    def choose_r_polynomials(self):
+        
+            
 
 
 
