@@ -101,7 +101,6 @@ class Polynomial:
                         res.append(value)
 
         return Counter(res)
-                
 
 
 # determines if a value x is in the UNION of two multisets

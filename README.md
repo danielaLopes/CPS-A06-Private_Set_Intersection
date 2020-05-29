@@ -78,6 +78,7 @@ Every different entity must be executed in a different terminal:
 * 2 clients
 
 ## Execute a client
+Client 2 should be the first to be executed and submitted input multiset, then it waits for client 1 to start protocol
 ```
 cd set_intersection_hbc/
 python set_intersection_client.py non_encrypted <i> <n> <c>
