@@ -72,10 +72,20 @@ class Polynomial:
         return Polynomial(res)
 
     # performs the division of two polynomials and returns the remainder
-    def division(self, other):       
+    def division(self, other): 
+        # remainder : res[1][0]
+        # result: res[0][0]      
         res = np.polydiv(np.array(self.coefficients), np.array(other.coefficients))
 
-        return res[1][0]
+        return res
+
+    def division_by_x(self):    
+        new_coefficients = [] 
+        for i in range(1, len(self.coefficients)):
+            new_coefficients.append(self.coefficients[i])
+
+        self.coefficients = new_coefficients
+        return self
 
     # gets list of elements from a given multiset and respective multiplicity that are in the dividend polynomial (self)
     def get_elements(self, multiset):
@@ -94,29 +104,36 @@ class Polynomial:
             if value == 0:
                 if self.coefficients[0] == 0:
                     remainder = 0.0
+                    print("before division by x: " + str(self.coefficients))
+                    resultant_dividend = self.division_by_x()
+                    print("division by x: " + str(resultant_dividend.coefficients))
                 else:
                     remainder = -1
             else:
-                remainder = self.division(divisor_polynomial)
-            print(" dividend: " +  str(self.coefficients))
-            print(" divisor: " + str(divisor_polynomial.coefficients))
+                result = self.division(divisor_polynomial)
+                remainder = result[1][0]
+                resultant_dividend = Polynomial(result[0])
+        
             if remainder == 0.0:
                 res.append(value)
-
-                divisor_polynomial_multiplicity = divisor_polynomial
+ 
                 # if it were 0 it would mean the element appeared 0 times in the set
                 for b in range(1, multiplicity + 1):
 
-                    divisor_polynomial_multiplicity = divisor_polynomial_multiplicity.multiplication(divisor_polynomial)
-                    print(" dividend: " +  str(self.coefficients))
-                    print(" divisor: " + str(divisor_polynomial_multiplicity.coefficients))
-                    if divisor_polynomial_multiplicity.degree() > self.degree(): 
-                        #print(" divisor_polynomial.degree(): " +  str(divisor_polynomial.degree()))
-                        #print(" self.degree(): " + str(self.degree()))
+                    if divisor_polynomial.degree() > resultant_dividend.degree(): 
                         break
-                    # TODO: do i need to keep dividing?? or can i assume the multiples are always going to be divisors???
-                    remainder = self.division(divisor_polynomial_multiplicity)
-                    print(" remainder: " + str(remainder))
+                    
+                    if value == 0:
+                        if self.coefficients[0] == 0:
+                            remainder = 0.0
+                            resultant_dividend = resultant_dividend.division_by_x()
+                        else:
+                            remainder = -1
+                    else:
+                        result = resultant_dividend.division(divisor_polynomial)
+                        resultant_dividend = Polynomial(result[0])
+                        remainder = result[1][0]
+
                     if remainder == 0.0:
                         res.append(value)
 
