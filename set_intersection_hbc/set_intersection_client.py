@@ -13,7 +13,7 @@ from collections import Counter
 import sys
 sys.path.append('../')
 
-from multiset_operations import get_polinomial, union, intersection, Polynomial
+from multiset_operations import get_polinomial, union, intersection, generate_r, Polynomial
 
 
 # Non-Encrypted version
@@ -118,8 +118,8 @@ class Set_Intersection_Client:
         self.r_polynomials = []
         #for i in (0, self.c):
         # r for 
-        self.r_polynomials.append(Polynomial([1,1,1,1]))
-        #self.append(Polynomial([1,1]))
+        print("degree: " + str(self.polynomial.degree()))
+        self.r_polynomials.append(generate_r(self.polynomial.degree()))
     
     # 1.d)
     def compute_phi_polynomial(self):

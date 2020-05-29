@@ -1,11 +1,6 @@
-"""from collections import Counter
-counterA = Counter(['a','b','b','c'])
-counterA
-Counter({'b': 2, 'a': 1, 'c': 1})
-lst = [Counter(['a','b']), Counter(['a'])]
-"""
 from collections import Counter
 import numpy as np
+import secrets
 
 
 class Polynomial:
@@ -104,9 +99,7 @@ class Polynomial:
             if value == 0:
                 if self.coefficients[0] == 0:
                     remainder = 0.0
-                    print("before division by x: " + str(self.coefficients))
                     resultant_dividend = self.division_by_x()
-                    print("division by x: " + str(resultant_dividend.coefficients))
                 else:
                     remainder = -1
             else:
@@ -221,20 +214,11 @@ def get_polinomial(multiset):
     for i in range(1, len(multiset_polinomials)) :
         res_polinomial = res_polinomial.multiplication(multiset_polinomials[i])
 
-    """print("res back to multiset with division for 1: " + str(res_polinomial.division(Polynomial([-1,1]))))
-    print("res back to multiset with division for 6: " + str(res_polinomial.division(Polynomial([-6,1]))))
-    print("res back to multiset with division for 5: " + str(res_polinomial.division(Polynomial([-5,1]))))
-    print("res back to multiset with division for 4: " + str(res_polinomial.division(Polynomial([-4,1]))))
-    print("res back to multiset with division for 100: " + str(res_polinomial.division(Polynomial([-100,1]))))
-    print("res back to multiset with division for 3: " + str(res_polinomial.division(Polynomial([-3,1]))))
-    #print("res back to multiset with division for 0: " + str(res_polinomial.division(Polynomial([0,1]))))
-    print("res back to multiset with division for -1: " + str(res_polinomial.division(Polynomial([1,1]))))
-    print("res back to multiset with division for 2: " + str(res_polinomial.division(Polynomial([-2,1]))))"""
-    # TODO: how to test with 0???????? we cannot divide by 0
-    #print(res_polinomial.get_elements(Counter([1,2,3,4,0])))
     return res_polinomial
 
 def generate_r(degree):
     # a polynomial with coefficients chosen independently from R (set of all possible coefficients, needs to be sufficiently large)
-        
-    return r
+    r_coeficients = []
+    for i in range(0, degree + 1):
+        r_coeficients.append(secrets.randbelow(1000) )
+    return Polynomial(r_coeficients)
