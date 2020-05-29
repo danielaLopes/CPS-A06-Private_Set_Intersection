@@ -216,6 +216,7 @@ def get_polinomial(multiset):
 
     return res_polinomial
 
+
 def generate_r(degree):
     # a polynomial with coefficients chosen independently from R (set of all possible coefficients, needs to be sufficiently large)
     r_coeficients = []

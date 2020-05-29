@@ -70,37 +70,6 @@ def ttp_intersection(value):
     return connect_ttp("intersection", value)
 
 
-# input : [0,1,1,2,3] [3,4,4,4,5]
-# r: [1,1,1,1,1]
-# s: [3,3,3,3,3]
-# value 2 : belongs ????
-# value 3: belongs
-
-# r: [1,1,1,1,1]
-# s: [3,3,3,3,3]
-# value 3: belongs
-
-# input : [0,1,5,2,3] [3,2,4,4,5]
-# r: [1,1,1,1,1]
-# s: [3,3,3,3,3]
-# value 2 : belongs
-# value 3: belongs
-# value 5: belongs
-"""
-def local_intersection(multiset1, multiset2, x):
-    polinomial_f = get_polinomial(multiset1, x)
-    print("polinomial_f: " + str(polinomial_f))
-    polinomial_g = get_polinomial(multiset2, x)
-    print("polinomial_g: " + str(polinomial_g))
-
-    #polinomial_r = calculate_polinomial_for_intersection(multiset1, x)
-    polinomial_r = get_polinomial([1,1,1,1,1], x)
-
-    #polinomial_s = calculate_polinomial_for_intersection(multiset2, x)
-    polinomial_s = get_polinomial([3,3,3,3,3], x)
-    
-    return polinomial_f * polinomial_r + polinomial_g * polinomial_s
-"""
 def local_union(multiset1, multiset2, x):
     return union(multiset1, multiset2, x)
 
