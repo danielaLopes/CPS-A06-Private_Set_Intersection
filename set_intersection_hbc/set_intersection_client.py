@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 import socket
-from threading import Thread
 import json
 #import urllib.request
 #import urllib.parse
@@ -8,6 +7,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import os
 import ast 
+from collections import Counter
 
 # import library in a different directory
 import sys
@@ -15,12 +15,6 @@ sys.path.append('../')
 
 from multiset_operations import get_polinomial, union, intersection, Polynomial
 
-
-class Server_Thread(Thread):
-    def __init__(self):
-
-    def run(self):
-        while True:
 
 # Non-Encrypted version
 class Set_Intersection_Client:
@@ -38,7 +32,6 @@ class Set_Intersection_Client:
                 self.other_ports.append(8000 + client_id)
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                #sock.connect(('127.0.0.1', 8000 + client_id))
                 self.sockets.append(sock)
             else:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,44 +54,27 @@ class Set_Intersection_Client:
         for (sock,port) in zip(self.sockets,self.other_ports):
             sock.connect(('127.0.0.1', port))
 
-    def broadcast(self, toSend):
-        for sock in self.sockets:
-            sock.send(toSend.encode("utf-8"))
-        #self.refreshSockets()
-        #sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        #if self.i == 1:
-            #sock.connect(('127.0.0.1', 8002))
-        #elif self.i == 2:
-            #sock.connect(('127.0.0.1', 8001))
-        #sock.send(toSend.encode("utf-8"))
-        print("tosend: " + toSend)
-
-    def send_to_client_1(self, toSend):
-        self.sockets[0].connect(('127.0.0.1', self.other_ports[0]))
-        self.sockets[0].send(toSend.encode("utf-8"))
-
-    def receive(self):
-        #sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        #sock.bind(('127.0.0.1', 8000 + self.i))
-
+    def acceptConnections(self):
         self.socket.listen(5)
-        #sock.listen(5)
-        print("waiting to receive data...")
         #try:
-        conn, addr = self.socket.accept()
+        self.conn, addr = self.socket.accept()
         #conn, addr = sock.accept()
         #except KeyboardInterrupt:
             #print("exiting")
             #os._exit()  
-        n_received = 0
+
+    def broadcast(self, toSend):
+        for sock in self.sockets:
+            sock.send(toSend.encode("utf-8"))
+
+    def send_to_client_1(self, toSend):
+        self.sockets[0].send(toSend.encode("utf-8"))
+
+    def receive(self):
         buffer = []
-        print("received data")
+        n_received = 0
         while n_received < self.n-1:
-            print("inside while")
-            data = conn.recv(4096)     
-            print("data: " + str(data.decode('utf-8')))
+            data = self.conn.recv(4096)     
             buffer.append(Polynomial(ast.literal_eval(data.decode('utf-8'))))
             n_received += 1
 
@@ -127,14 +103,14 @@ class Set_Intersection_Client:
             self.connectSockets()
             # client 1 is the first to send polynomials
             self.broadcast(str(self.polynomial.coefficients))
+            self.acceptConnections()
             self.other_polynomials = self.receive()   
         elif self.i == 2: 
             # client 2 first receives polynomials from client1 and then sends its own
+            self.acceptConnections()
             self.other_polynomials = self.receive()
             self.connectSockets()
             self.broadcast(str(self.polynomial.coefficients))
-
-        print("self.other_polynomials: " + str(self.other_polynomials))
 
     # 1.c)
     def choose_r_polynomials(self):
@@ -165,7 +141,7 @@ class Set_Intersection_Client:
             self.broadcast(str(self.phi_polynomial.coefficients))
             print("sent data: " + str(self.phi_polynomial.coefficients))
             # waits until other client sends him the final lambda polynomial
-            #self.other_lambda_polynomials = self.receive()
+            self.other_lambda_polynomials = self.receive()
             # final polynomial should consist on the intersection of the multisets of both players
             print("Received final polinomial: " + self.other_lambda_polynomials[0].__repr__())
         # 3.
@@ -189,7 +165,7 @@ class Set_Intersection_Client:
     # 3.c)
     def send_lambda_polynomial(self):
         # performed by client 2 only
-        self.send_to_client_1(self.lambda_polynomial.coefficients)
+        self.send_to_client_1(str(self.lambda_polynomial.coefficients))
 
 
 
