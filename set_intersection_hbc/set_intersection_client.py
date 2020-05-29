@@ -93,7 +93,7 @@ class Set_Intersection_Client:
     def create_polynomial(self):
         # multiset should be in the format "[0,1,1,2,3]"
         client_input = input("Submit a multiset in the format [a1,...,ak]: ")
-        self.multiset = map(int, client_input.strip('[]').split(','))
+        self.multiset = ast.literal_eval(client_input)
         self.polynomial = get_polinomial(self.multiset)
 
     # 1.b)
@@ -118,8 +118,8 @@ class Set_Intersection_Client:
         self.r_polynomials = []
         #for i in (0, self.c):
         # r for 
-        self.r_polynomials.append(get_polinomial([1,1]))
-        #self.append(get_polinomial([1,1]))
+        self.r_polynomials.append(Polynomial([1,1,1,1]))
+        #self.append(Polynomial([1,1]))
     
     # 1.d)
     def compute_phi_polynomial(self):
@@ -131,42 +131,40 @@ class Set_Intersection_Client:
         if len(self.r_polynomials) > 1:
             for (r, f) in (self.r_polynomials[1: ], self.other_polynomials):
                 self.phi_polynomial = f.multiplication(r)
+        print("STEP 1.d) my phi polynomial: " + str(self.phi_polynomial.coefficients))
 
     # 2. and 3.
     def send_phi_polynomial(self):
         # 2.
         if self.i == 1:
-            print("Client 1!")
             # client 1 is the first to send polynomials
             self.broadcast(str(self.phi_polynomial.coefficients))
-            print("sent data: " + str(self.phi_polynomial.coefficients))
             # waits until other client sends him the final lambda polynomial
             self.other_lambda_polynomials = self.receive()
             # final polynomial should consist on the intersection of the multisets of both players
-            print("Received final polinomial: " + self.other_lambda_polynomials[0].__repr__())
+            # TODO: since i only have 2 clients, the polynomial client 1 sends me is already the right one
+            # but i should update the final polynomial in client 1 and send it to all other clients
+            print("STEP 3.c) Received lambda polinomial: " + str(self.other_lambda_polynomials[0].coefficients))
         # 3.
         elif self.i == 2: 
-            print("Client 2!")
             # client 2 first receives polynomials from client1 and then sends its own
             self.other_lambda_polynomials = self.receive()
-            print("received self.other_lambda_polynomials: " + str(self.other_lambda_polynomials))
+            print("STEP 3.a) received lambda_polynomial: " + str(self.other_lambda_polynomials[0].coefficients))
             self.sum_lambda_phi_polynomials()
             # TODO: change this in case of more clients
             #self.broadcast(str(self.lambda_polynomial.coefficients))
             self.send_lambda_polynomial()
 
-        print("self.other_lambda_polynomials: " + str(self.other_lambda_polynomials))
-
     # 3.b)
     def sum_lambda_phi_polynomials(self):
         # performed by client 2 only
         self.lambda_polynomial = self.other_lambda_polynomials[0].sum(self.phi_polynomial)
+        print("STEP 3.b) my lambda polynomial: " + str(self.lambda_polynomial.coefficients))
     
     # 3.c)
     def send_lambda_polynomial(self):
         # performed by client 2 only
         self.send_to_client_1(str(self.lambda_polynomial.coefficients))
-
 
 
 # Encrypted version

@@ -18,7 +18,6 @@ def submit(multiset):
 
     conn.request('POST', '/', json_data, headers)
 
-    #conn.request("GET", "/")
     response = conn.getresponse()
 
     print(response.status, response.reason)

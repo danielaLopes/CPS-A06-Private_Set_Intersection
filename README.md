@@ -7,7 +7,7 @@
 
 # Implementation
 ## Attacker model
-* honest-but-curious players (HBC): no players collude and disclose their information to reveal other players information. A Trusted Third Party receives the inputs of all parties and outputs the result of the defined function.
+* honest-but-curious players (HBC): even if c < n players collude and disclose their information, gains information about other players input other than what can be deduced by the result of the protocol. A Trusted Third Party receives the inputs of all parties and outputs the result of the defined function.
 * PPT-bounded adversary model: probabilistic polynomial-time machines
 
 ## Techniques and Tools

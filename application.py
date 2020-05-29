@@ -115,8 +115,10 @@ def main():
     Experiment this protocol with 2 clients and a Trusted Third Party.\n\
     1. Both clients should submit a multiset.\n\
     2. Choose between the following supported operations:\n\
-    union                    Perform union operation between multisets\n\
-    intersection             Perform intersection operation between multisets\n\n\
+    multiset_union           Perform union operation between multisets and obtain the resulting multiset\n\
+    multiset_intersection    Perform intersection operation between multisets and obtain the resulting multiset\n\n\
+    union                    Perform union operation between multisets and check if a value is in the union\n\
+    intersection             Perform intersection operation between multisets and check if a value is in the intersection\n\n\
                             OR\n\n\
     1. Perform local operations for testing:\n\
     local_union              Test union operation between multisets\n\
@@ -124,6 +126,8 @@ def main():
 
     usage = '\n\
     python application.py <command> [<args>]\n\
+    python application.py multiset_union\n\
+    python application.py multiset_intersection\n\
     python application.py union "<value>"\n\
     python application.py intersection "<value>"\n\
     python application.py local_union "<multiset1>" "<multiset2>" "<value>""\n\
@@ -131,14 +135,24 @@ def main():
 
     parser = argparse.ArgumentParser(prog='privacy_multiset', description=description,
                                      usage=usage, formatter_class=RawTextHelpFormatter)
-    parser.add_argument('command', type=str, choices=['union', 'intersection', 'local_union', 'local_intersection'])
+    parser.add_argument('command', type=str, choices=['multiset_union', 'multiset_intersection', 'union', 'intersection', 'local_union', 'local_intersection'])
     parser.add_argument('multiset_arg1', nargs='?')
     parser.add_argument('multiset_arg2', nargs='?')
     parser.add_argument('value', nargs='?')
 
     args = parser.parse_args()
 
-    if args.command.__eq__('union'):
+    if args.command.__eq__('multiset_union'):
+        result_bytes = ttp_multiset_union()
+        result = result_bytes.decode('utf-8')
+        print("UNION multiset: " + str(result))
+
+    elif args.command.__eq__('multiset_intersection'):
+        result_bytes = ttp_multiset_intersection()
+        result = result_bytes.decode('utf-8')
+        print("INTERSECTION multiset: " + str(result))
+
+    elif args.command.__eq__('union'):
         value = args.multiset_arg1
         result_bytes = ttp_union(value)
         result = result_bytes.decode('utf-8')

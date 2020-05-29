@@ -73,30 +73,50 @@ class Polynomial:
 
     # performs the division of two polynomials and returns the remainder
     def division(self, other):       
-        res = np.polydiv(self.coefficients, other.coefficients)
+        res = np.polydiv(np.array(self.coefficients), np.array(other.coefficients))
 
         return res[1][0]
 
     # gets list of elements from a given multiset and respective multiplicity that are in the dividend polynomial (self)
     def get_elements(self, multiset):
         res = []
-        for value in multiset:          
+        np.seterr(divide='ignore', invalid='ignore')
+ 
+        for value in multiset:      
+            print("Testing if " + str(value) + " is in intersection multiset")    
             multiplicity = multiset[value] 
-            divisor_polynomial = Polynomial([-value, 1])
-
-            remainder = self.division(divisor_polynomial)
+            if value <= 0:
+                divisor_polynomial = Polynomial([value, 1])
+            else:
+                divisor_polynomial = Polynomial([-value, 1])
+            
+            # any polinomial in the format [0, x, y, z, ...] is divisible by 0
+            if value == 0:
+                if self.coefficients[0] == 0:
+                    remainder = 0.0
+                else:
+                    remainder = -1
+            else:
+                remainder = self.division(divisor_polynomial)
+            print(" dividend: " +  str(self.coefficients))
+            print(" divisor: " + str(divisor_polynomial.coefficients))
             if remainder == 0.0:
                 res.append(value)
 
+                divisor_polynomial_multiplicity = divisor_polynomial
                 # if it were 0 it would mean the element appeared 0 times in the set
                 for b in range(1, multiplicity + 1):
 
-                    divisor_polynomial = divisor_polynomial.multiplication(divisor_polynomial)
-
-                    if divisor_polynomial.degree() > self.degree(): 
+                    divisor_polynomial_multiplicity = divisor_polynomial_multiplicity.multiplication(divisor_polynomial)
+                    print(" dividend: " +  str(self.coefficients))
+                    print(" divisor: " + str(divisor_polynomial_multiplicity.coefficients))
+                    if divisor_polynomial_multiplicity.degree() > self.degree(): 
+                        #print(" divisor_polynomial.degree(): " +  str(divisor_polynomial.degree()))
+                        #print(" self.degree(): " + str(self.degree()))
                         break
                     # TODO: do i need to keep dividing?? or can i assume the multiples are always going to be divisors???
-                    remainder = self.division(divisor_polynomial)
+                    remainder = self.division(divisor_polynomial_multiplicity)
+                    print(" remainder: " + str(remainder))
                     if remainder == 0.0:
                         res.append(value)
 
@@ -172,16 +192,17 @@ def get_polinomial(multiset):
     for value in counter_multiset:
         multiplicity = counter_multiset[value] 
         # [x^0, x^1] 
-        polynomial = Polynomial([-value, 1])
-        print(polynomial) 
+        if value <= 0:
+            polynomial = Polynomial([value, 1])
+        else:
+            polynomial = Polynomial([-value, 1])
+
         for i in range(0, multiplicity):
             multiset_polinomials.append(polynomial)
     
     res_polinomial = multiset_polinomials[0]
     for i in range(1, len(multiset_polinomials)) :
         res_polinomial = res_polinomial.multiplication(multiset_polinomials[i])
-
-    print("res: " + res_polinomial.__repr__())
 
     """print("res back to multiset with division for 1: " + str(res_polinomial.division(Polynomial([-1,1]))))
     print("res back to multiset with division for 6: " + str(res_polinomial.division(Polynomial([-6,1]))))
@@ -196,17 +217,7 @@ def get_polinomial(multiset):
     #print(res_polinomial.get_elements(Counter([1,2,3,4,0])))
     return res_polinomial
 
-
-#def deg(multiset):
-#    return len(multiset)
-
-
-def calculate_polinomial_for_intersection(multiset, polinomial, x):
-    degree = deg(multiset)
-    sum_value = 0
-    # does a summation include the last element???
-    for i in range(0, degree):
-        # what is r, r[i] and R ???????
-        sum_value += r[i] * pow(x, i)
+def generate_r(degree):
+    # a polynomial with coefficients chosen independently from R (set of all possible coefficients, needs to be sufficiently large)
         
     return r
