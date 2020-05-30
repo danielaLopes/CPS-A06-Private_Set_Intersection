@@ -72,7 +72,11 @@ class Set_Intersection_Client:
                 sock.send(toSend.encode("utf-8"))
 
     def send_to_client_1(self, toSend):
-        self.sockets[0].send(toSend.encode("utf-8"))
+        try:
+            self.sockets[0].send(toSend.encode("utf-8"))
+        except:
+            self.connectSockets()
+            self.sockets[0].send(toSend.encode("utf-8"))
 
     def receive(self):
         if not hasattr(self, 'conn'):
@@ -86,14 +90,6 @@ class Set_Intersection_Client:
 
         self.refreshSocket()
         return buffer
-
-    # returns a multiset of all elements from the client multiset that belong to the intersection multiset
-    def get_client_intersection_elements(self):
-        if self.i == 1:
-            intersection_els = self.other_lambda_polynomials[0].get_elements(Counter(self.multiset))
-        else:
-            intersection_els = self.lambda_polynomial.get_elements(Counter(self.multiset))
-        print("final intersection multiset: " + str(intersection_els))
 
     # 1.a)
     def create_polynomial(self):
@@ -170,8 +166,35 @@ class Set_Intersection_Client:
     
     # 3.c)
     def send_lambda_polynomial(self):
+        self.refreshSockets()
         # performed by client 2 only
         self.send_to_client_1(str(self.lambda_polynomial.coefficients))
+
+    # returns a multiset of all elements from the client multiset that belong to the intersection multiset
+    def get_client_intersection_elements(self):
+        if self.i == 1:
+            intersection_els = self.other_lambda_polynomials[0].get_elements(Counter(self.multiset))
+            # TODO: am i supposed to have this for other clients??
+        else:
+            intersection_els = self.lambda_polynomial.get_elements(Counter(self.multiset))
+        print("final intersection multiset: " + str(intersection_els))
+
+    def private_set_intersection(self):
+        # ----------------- Phase 1 ------------------
+        self.create_polynomial()
+        input("Press enter to continue: ")
+        #client.send_multiset_polynomial()
+
+        input("Press enter to continue: ")
+        self.choose_r_polynomials()
+        self.compute_phi_polynomial()
+
+        # --------------- Phases 2 + 3 ---------------
+        input("Press enter to continue: ")
+        self.send_phi_polynomial()
+
+        # ----------------- Phase 4 ------------------
+        self.get_client_intersection_elements()
 
 
 # Encrypted version
@@ -180,48 +203,6 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
     def __init__(self, i, n, c):
         super(Encrypted_Set_Intersection_Client, self).__init__(i, n, c)
         print(self.i)
-
-    def encrypt_polynomial(polynomial):
-        ciphertext = []
-        for value in polynomial:
-            ciphertext.append(self.private_key.encrypt(value))
-        return ciphertext
-
-    def decrypt_polynomial(polynomial):
-        plaintext = []
-        for value in polynomial:
-            plaintext.append(self.public_key.encrypt(value))
-        return plaintext
-
-    def sum_encrypted_polynomials(polynomial1, polynomial2):
-        sum_polynomial = []
-        max_index = max(len(polynomial1), len(polynomial2))
-        min_index = min(len(polynomial1), len(polynomial2))
-        for i in range(0, min_index):
-            sum_polynomial.append(polynomial1[i] + polynomial2[i])
-        if len(polynomial1) < max_index:
-            for i in range(min_index, max_index):
-                sum_polynomial.append(polynomial2)
-        else:
-            for i in range(min_index, max_index):
-                sum_polynomial.append(polynomial1)
-
-    def generate_key_pair(self):
-        # only client 1 has private key
-        if self.i == 1:
-            self.public_key, self.private_key = paillier.generate_paillier_keypair(n_length=2048)
-            self.broadcast(str(self.public_key))
-        else:
-            self.public_key = self.receive_key()[0]
-
-    def test_homomorphic_sum(self):
-        if self.i == 1:
-            ciphered_num1 = self.public_key.encrypt(3, precision=1)
-            ciphered_num2 = self.public_key.encrypt(4, precision=1)
-            print("ciphered_num2: " + str(ciphered_num2))
-            ciphered_sum = ciphered_num1 + ciphered_num2
-            deciphered_sum = self.private_key.decrypt(ciphered_sum)
-            print("deciphered_sum: " + str(deciphered_sum))
 
     def receive_key(self):
         if not hasattr(self, 'conn'):
@@ -236,6 +217,101 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
         self.refreshSocket()
         return buffer
 
+    def receive_encrypted_polinomial(self):
+        if not hasattr(self, 'conn'):
+            self.acceptConnections()
+        buffer = []
+        n_received = 0
+        message_delimitor = ']]}'.encode('utf-8')
+        while n_received < self.n-1:
+            # necessary because encrypted polynomials can get quite big
+            data = self.conn.recv(4096)  
+            if data[-3:] == message_delimitor:
+                decoded_data = data.decode('utf-8')
+                buffer.append(decoded_data)
+            else:
+                while data[-3:] != message_delimitor:
+                    data += self.conn.recv(4096)  
+                decoded_data = data.decode('utf-8')
+                buffer.append(decoded_data)
+            n_received += 1
+
+        self.refreshSocket()
+        return buffer
+
+    """def broadcast_encrypted_polinomial(self, toSend):      
+        for sock in self.sockets:
+            try:
+                sock.send(toSend)
+            except:
+                self.connectSockets()
+                sock.send()"""
+
+    def serialize_public_key(self, toSend):  
+        toSend_json = {} 
+        toSend_json['public_key'] = {'n': self.public_key.n}
+        return json.dumps(toSend_json)
+
+    def deserialize_public_key(self, received):  
+        key_dict = json.loads(received)
+        public_key = key_dict['public_key']
+        return paillier.PaillierPublicKey(n=int(public_key['n']))
+
+    def serialize_encrypted_polinomial(self, toSend):  
+        encrypted_polynomial_json = {}
+        encrypted_polynomial_json['values'] = [
+            (str(x.ciphertext()), x.exponent) for x in toSend
+        ]
+        #return encrypted_polynomial_json
+        return json.dumps(encrypted_polynomial_json)
+
+    def deserialize_encrypted_polinomial(self, received):  
+        received_dict = json.loads(received)
+        encrypted_values = [
+            # TODO: should i need the public key?
+            paillier.EncryptedNumber(self.public_key, int(x[0]), int(x[1]))
+            for x in received_dict['values']
+        ]
+        return encrypted_values
+
+    def deserialize_encrypted_polinomials(self, received):  
+        polynomial_list = []
+        for polynomial in received:
+            polynomial_list.append(Polynomial(self.deserialize_encrypted_polinomial(polynomial)))
+        return polynomial_list
+
+    def encrypt_polynomial(self, polynomial):
+        ciphertext = []
+        for value in polynomial.coefficients:
+            ciphertext.append(self.public_key.encrypt(value))
+        return Polynomial(ciphertext)
+
+    def decrypt_polynomial(self, polynomial):
+        plaintext = []
+        for value in polynomial.coefficients:
+            plaintext.append(self.private_key.decrypt(value))
+        return Polynomial(plaintext)
+
+    def sum_encrypted_polynomials(self, polynomial1, polynomial2):
+        return polynomial1.sum(polynomial2)
+
+    def generate_key_pair(self):
+        # only client 1 has private key
+        if self.i == 1:
+            self.public_key, self.private_key = paillier.generate_paillier_keypair(n_length=2048)
+            self.broadcast(self.serialize_public_key(self.public_key))
+        else:
+            self.public_key = self.deserialize_public_key(self.receive_key()[0])
+
+    def test_homomorphic_sum(self):
+        if self.i == 1:
+            ciphered_num1 = self.public_key.encrypt(3, precision=1)
+            ciphered_num2 = self.public_key.encrypt(4, precision=1)
+            print("ciphered_num2: " + str(ciphered_num2))
+            ciphered_sum = ciphered_num1 + ciphered_num2
+            deciphered_sum = self.private_key.decrypt(ciphered_sum)
+            print("deciphered_sum: " + str(deciphered_sum))
+
     # returns a multiset of all elements from the client multiset that belong to the intersection multiset
     def get_client_intersection_elements(self):
         if self.i == 1:
@@ -246,14 +322,24 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
 
     # 2. and 3.
     def send_phi_polynomial(self):
+        # encrypt phi polynomial to send to other players
+        #print("self.phi_polynomial: " + str(self.phi_polynomial))
+        self.lambda_polynomial = self.encrypt_polynomial(self.phi_polynomial)
+        #print("self.lambda_polynomial: " + str(self.lambda_polynomial))
+        
         # 2.
-        if self.i == 1:
-            # encrypt phi polynomial to send to other players
-
+        if self.i == 1:         
             # client 1 is the first to send polynomials
-            self.broadcast(str(self.phi_polynomial.coefficients))
-            # waits until other client sends him the final lambda polynomial
-            self.other_lambda_polynomials = self.receive()
+            #self.broadcast(str(self.lambda_polynomial.coefficients))
+            serialized_polynomial = self.serialize_encrypted_polinomial(self.lambda_polynomial.coefficients)
+            #self.broadcast_encrypted_polinomial(serialized_polynomial)
+            self.broadcast(serialized_polynomial)
+            # waits until other client sends him the components of the final lambda polynomial, encrypted
+            #self.other_lambda_polynomials = self.deserialize_encrypted_polinomial(self.receive_encrypted_polinomial()[0])
+            print("waiting for other lambda polynomials...")
+            self.other_lambda_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial())
+            #self.other_lambda_polynomials = self.receive_encrypted_polinomial()
+            #print(self.other_lambda_polynomials[0].coefficients)
             # final polynomial should consist on the intersection of the multisets of both players
             # TODO: since i only have 2 clients, the polynomial client 1 sends me is already the right one
             # but i should update the final polynomial in client 1 and send it to all other clients
@@ -261,7 +347,8 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
         # 3.
         elif self.i == 2: 
             # client 2 first receives polynomials from client1 and then sends its own
-            self.other_lambda_polynomials = self.receive()
+            self.other_lambda_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial())
+            #self.other_lambda_polynomials = self.receive_encrypted_polinomial()
             print("STEP 3.a) received lambda_polynomial: " + str(self.other_lambda_polynomials[0].coefficients))
             self.sum_lambda_phi_polynomials()
             # TODO: change this in case of more clients
@@ -271,13 +358,24 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
     # 3.b)
     def sum_lambda_phi_polynomials(self):
         # performed by client 2 only
-        self.lambda_polynomial = self.other_lambda_polynomials[0].sum(self.phi_polynomial)
+        # TODO: change for more clients
+        self.lambda_polynomial = self.other_lambda_polynomials[0].sum(self.lambda_polynomial)
         print("STEP 3.b) my lambda polynomial: " + str(self.lambda_polynomial.coefficients))
     
     # 3.c)
     def send_lambda_polynomial(self):
         # performed by client 2 only
-        self.send_to_client_1(str(self.lambda_polynomial.coefficients))
+        self.send_to_client_1(self.serialize_encrypted_polinomial(self.lambda_polynomial.coefficients))
+
+    # returns a multiset of all elements from the client multiset that belong to the intersection multiset
+    def get_client_intersection_elements(self):
+        if self.i == 1:
+            self.decrypted_final_polynomial = self.decrypt_polynomial(self.other_lambda_polynomials[0])
+            intersection_els = self.decrypted_final_polynomial.get_elements(Counter(self.multiset))
+            print("final intersection multiset: " + str(intersection_els))
+        #else:
+            #intersection_els = self.lambda_polynomial.get_elements(Counter(self.multiset))
+        #print("final intersection multiset: " + str(intersection_els))
 
 
 def main():
@@ -309,24 +407,16 @@ def main():
         parser.error('wrong command')
 
     client.generate_key_pair()
-    client.test_homomorphic_sum()
+    client.private_set_intersection()
 
-    # ----------------- Phase 1 ------------------
-    """
-    client.create_polynomial()
-    input("Press enter to continue: ")
-    #client.send_multiset_polynomial()
+    """if client.i == 1:
+        encrypted_ply1 = client.encrypt_polynomial(Polynomial([1,2,3]))
+        encrypted_ply2 = client.encrypt_polynomial(Polynomial([2,4,3]))
+        sum_poly = client.sum_encrypted_polynomials(encrypted_ply1, encrypted_ply2)
+        decrypted_sum_poly = client.decrypt_polynomial(sum_poly)
+        print(decrypted_sum_poly)"""
+    #client.test_homomorphic_sum()
 
-    input("Press enter to continue: ")
-    client.choose_r_polynomials()
-    client.compute_phi_polynomial()
-
-    # --------------- Phases 2 + 3 ---------------
-    input("Press enter to continue: ")
-    client.send_phi_polynomial()
-
-    # ----------------- Phase 4 ------------------
-    client.get_client_intersection_elements()"""
 
 if __name__ == "__main__":
     main()
