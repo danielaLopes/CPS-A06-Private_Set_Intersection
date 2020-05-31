@@ -91,6 +91,13 @@ cd set_intersection_hbc/
 python set_intersection_client.py encrypted <i> <n> <c>
 python set_intersection_client.py encrypted 1 2 0
 python set_intersection_client.py encrypted 2 2 0
+
+python set_intersection_three_clients.py encrypted 1 2 0
+python set_intersection_three_clients.py encrypted 2 2 0
+
+python set_intersection_three_clients.py encrypted 1 3 2
+python set_intersection_three_clients.py encrypted 2 3 2
+python set_intersection_three_clients.py encrypted 3 3 2
 ```
 
 
