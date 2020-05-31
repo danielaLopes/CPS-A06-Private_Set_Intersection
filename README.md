@@ -49,18 +49,16 @@ python client.py submit "[0,1,1,4,5]"
 
 ## Use the application to check if a value is in the UNION and INTERSECTION of the clients multisets
 ```
-python application.py union "<value>"
-python application.py union "1"
+python application.py union
 
-python application.py intersection "<value>"
-python application.py intersection "1"
+python application.py intersection
 ```
 
 ## Use the application to test locally
 ```
-python application.py local_union "[0,1,1,2,3]"  "[0,1,1,4,5]" "0"
+python application.py local_union "[0,1,1,2,3]"  "[0,1,1,4,5]"
 
-python application.py local_intersection "[0,1,1,2,3]"  "[0,1,1,4,5]" "0"
+python application.py local_intersection "[0,1,1,2,3]"  "[0,1,1,4,5]"
 ```
 
 # Execution of Set Intersection HBC algorithm

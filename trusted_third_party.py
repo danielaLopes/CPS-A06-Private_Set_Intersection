@@ -5,10 +5,9 @@ import urllib.parse
 import socketserver
 import json
 from collections import Counter
+import ast
 
-from multiset_operations import union
-from multiset_operations import intersection
-
+from multiset_operations import polynomial_union, polynomial_intersection
 
 _multiset1 = ""
 _multiset2 = ""
@@ -16,37 +15,30 @@ _multiset2 = ""
 
 class RequestHandler(BaseHTTPRequestHandler):  
 
-    # computes UNION and INSTERSECTION requests
+    # computes UNION and INTERSECTION requests
     def do_GET(self):
         global _multiset1 
         global _multiset2
         print("Received GET request for " + self.path) 
         operation = urllib.parse.urlparse(self.path).path
-        query = urllib.parse.urlparse(self.path).query
-        print("operation " + operation)
-        print("query " + query) 
 
         if _multiset1 != "" and _multiset2 != "": 
 
-            print("_multiset1: " + _multiset1)
-            print("_multiset2: " + _multiset2)
-            
-            value = query.split("=")[1]
-            print("value " + value) 
-
-            map_multiset1 = map(int, _multiset1.strip('[]').split(','))
-            map_multiset2 = map(int, _multiset2.strip('[]').split(','))
+            list_multiset1 = ast.literal_eval(_multiset1)
+            list_multiset2 = ast.literal_eval(_multiset2)
 
             if operation == "/union":         
-                result = union(map_multiset1, map_multiset2, int(value))
+                result = polynomial_union(list_multiset1, list_multiset2)
+                union_multiset = result.get_elements(Counter(list_multiset1 + list_multiset2))
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(str(result).encode())
+                self.wfile.write(str(union_multiset).encode())
             elif operation == "/intersection":  
-                result = intersection(map_multiset1, map_multiset2, int(value))
+                result = polynomial_intersection(list_multiset1, list_multiset2)
+                intersection_multiset = result.get_elements(Counter(list_multiset1))
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(str(result).encode())
+                self.wfile.write(str(intersection_multiset).encode())
         else:
             self.send_response(404)
             self.end_headers()
@@ -67,16 +59,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         
         if _multiset1 != "" and _multiset2 != "":
             # resets multisets for next round
-            print("reset")
             _multiset1 = ""
             _multiset2 = ""
         if _multiset1 != "":
             _multiset2 = json_multiset["multiset"]
         else:
             _multiset1 = json_multiset["multiset"]
-
-        print("_multiset1:" + _multiset1)
-        print("_multiset2:" + _multiset2)
 
         self.send_response(200)
         self.end_headers()

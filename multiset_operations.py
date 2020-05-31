@@ -212,7 +212,7 @@ def union(multiset1, multiset2, x):
 
 # determines the polynomial resultant from the UNION of two mulisets
 def polynomial_union(multiset1, multiset2):
-    polinomial_f = get_polinomial(multise1)
+    polinomial_f = get_polinomial(multiset1)
     polinomial_g = get_polinomial(multiset2)
 
     return polinomial_f.multiplication(polinomial_g)
@@ -230,11 +230,8 @@ def intersection(multiset1, multiset2, x):
     polinomial_f = get_polinomial(multiset1, x)
     polinomial_g = get_polinomial(multiset2, x)
 
-    #polinomial_r = calculate_polinomial_for_intersection(multiset1, x)
-    polinomial_r = get_polinomial([1,1,1,1,1], x)
-
-    #polinomial_s = calculate_polinomial_for_intersection(multiset2, x)
-    polinomial_s = get_polinomial([3,3,3,3,3], x)
+    polinomial_r = generate_r(polinomial_f.degree()).check_if_root(x)
+    polinomial_s = generate_r(polinomial_g.degree()).check_if_root(x)
     
     return polinomial_f * polinomial_r + polinomial_g * polinomial_s
 
@@ -243,7 +240,13 @@ def polynomial_intersection(multiset1, multiset2):
     polinomial_f = get_polinomial(multiset1)
     polinomial_g = get_polinomial(multiset2)
 
-    return polinomial_f.sum(polinomial_g)
+    polinomial_r = generate_r(polinomial_f.degree())
+    polinomial_s = generate_r(polinomial_g.degree())
+
+    mult_polynomial1 = polinomial_f.multiplication(polinomial_r)
+    mult_polynomial2 = polinomial_g.multiplication(polinomial_s)
+
+    return mult_polynomial1.sum(mult_polynomial2)
 
 # determines the multiset resultant from the INTERSECTION of two multisets
 def multiset_intersection(multiset1, multiset2):
@@ -264,7 +267,6 @@ def get_polinomial(multiset, x):
 
 def get_polinomial(multiset):
     counter_multiset = Counter(multiset)
-    print(counter_multiset)
     k = sum(counter_multiset.values())
 
     # transform multiset in a list of lists of polynomials

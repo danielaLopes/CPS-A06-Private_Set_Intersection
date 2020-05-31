@@ -16,8 +16,8 @@ from multiset_operations import get_polinomial, union, intersection, generate_r,
 from threshold_paillier import ThresholdPaillier, EncryptedNumber, ThresholdPaillierPublicKey, ThresholdPaillierPrivateKey, combineShares
 
 
-# Encrypted version
-class Encrypted_Set_Intersection_Client:
+# Basic Client for socket operations
+class Client:
 
     def __init__(self, i, n, c):
         self.i = i
@@ -107,19 +107,6 @@ class Encrypted_Set_Intersection_Client:
         self.refreshSocket()
         return buffer
 
-    def receive_shared_keys(self):
-        if not hasattr(self, 'conn'):
-            self.acceptConnections()
-        buffer = []
-        n_received = 0
-        #while n_received < 1:
-        data = self.conn.recv(4096)     
-        buffer.append(data.decode('utf-8'))
-        n_received += 1
-
-        self.refreshSocket()
-        return buffer
-
     def receive_encrypted_polinomial(self, n_players):
         # message_delimitor is going to be either ']]}'
         if not hasattr(self, 'conn'):
@@ -147,6 +134,17 @@ class Encrypted_Set_Intersection_Client:
 
         return buffer
 
+    # 1.a)
+    def create_polynomial(self):
+        # multiset should be in the format [0,1,1,2,3]
+        client_input = input("Submit a multiset in the format [a1,...,ak]: ")
+        self.multiset = ast.literal_eval(client_input)
+        self.polynomial = get_polinomial(self.multiset)
+        self.encrypted_polynomial = self.encrypt_polynomial(self.polynomial)
+
+
+# regular version where only client 1 can decrypt
+class Set_Intersection_HBC_Client(Client):
     # --------------------- paillier serialization methods ---------------------
     def serialize_public_key(self, toSend):  
         toSend_json = {} 
@@ -222,33 +220,14 @@ class Encrypted_Set_Intersection_Client:
         return polynomial_list
 
     # --------------------- encryption and decryption methods ---------------------
-    # pk, sk: paillier key pair
-    # all players share sk
+    # only client 1 has private key and decrypts
     def generate_key_pair(self):
-        # TODO: change this
-        # only client 1 has private key
+        self.isShared = False
         if self.i == 1:
             self.public_key, self.private_key = paillier.generate_paillier_keypair(n_length=2048)
             self.broadcast(self.serialize_public_key(self.public_key))
         else:
             self.public_key = self.deserialize_public_key(self.receive_key()[0])
-
-    def generate_shared_key_pair(self):
-        if self.i == 1:
-            threshold_paillier = ThresholdPaillier(1024, self.n)
-            
-            #change this
-            self.private_keys = threshold_paillier.priv_keys
-            self.public_key = threshold_paillier.pub_key
-            self.private_key = self.private_keys[0]
-
-            self.broadcast(self.serialize_shared_keys(self.public_key, self.private_key))
-            print("type of public_key")
-            print(type(self.public_key))
-        else:
-            self.deserialize_shared_keys(self.receive_shared_keys()[0])
-            print("type of public_key")
-            print(type(self.public_key))
 
     def encrypt_polynomial(self, polynomial):
         ciphertext = []
@@ -261,6 +240,197 @@ class Encrypted_Set_Intersection_Client:
         for value in polynomial.coefficients:
             plaintext.append(self.private_key.decrypt(value))
         return Polynomial(plaintext)
+
+    # --------------------- encrypted operation methods ---------------------
+    # sum two encrypted polynomials:
+    def sum_encrypted_polynomials(self, polynomial1, polynomial2):
+        return polynomial1.sum(polynomial2, self.public_key)
+
+    # multiply an unencrypted polynomial and an encrypted polynomial:
+    def multiply_encrypted_unencrypted_polynomials(self, polynomial1, polynomial2):
+        return polynomial1.multiplication(polynomial2)
+
+    # 1.b)
+    def send_multiset_polynomial(self):
+        # TODO: needs adaptations to work with more clients
+        if self.i == 1:
+            # client 1 is the first to send polynomials   
+            self.broadcast(self.serialize_encrypted_polinomial(self.encrypted_polynomial.coefficients))
+            print("Waiting to receive encrypted fi from player 1 and player 2")
+            #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(2))
+            self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
+            #self.other_polynomials.append(self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1)))
+        elif self.i == 2: 
+            # client 2 first receives polynomials from client1 and then sends its own
+            # receives f1 from player 1
+            print("Waiting to receive encrypted fi from player 1")
+            self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
+            print("after receiving from player 1")
+            self.broadcast(self.serialize_encrypted_polinomial(self.encrypted_polynomial.coefficients))
+            # receives f3 from player 3
+            #print("Waiting to receive encrypted fi from player 2")
+            #self.other_polynomials.append(self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1)))
+        elif self.i == 3:
+            print("Waiting to receive encrypted fi from player 1 and player 2")
+            #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(2))
+            self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
+            #self.other_polynomials.append(self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1)))
+            #print("Waiting to receive encrypted fi from player 2")
+            #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
+            print("Broadcasting polynomial to other players")
+            self.broadcast(self.serialize_encrypted_polinomial(self.encrypted_polynomial.coefficients))     
+
+    # 1.c)
+    def choose_r_polynomials(self):
+        self.r_polynomials = []
+        for i in (0, self.c): 
+            self.r_polynomials.append(generate_r(self.polynomial.degree()))
+    
+    # 1.d)
+    def compute_phi_polynomial(self):
+        self.phi_polynomial = self.multiply_encrypted_unencrypted_polynomials(self.encrypted_polynomial, self.r_polynomials[0])
+        for i in range(0, len(self.other_polynomials)):
+            phi_part = self.multiply_encrypted_unencrypted_polynomials(self.other_polynomials[i], self.r_polynomials[i+1])
+            self.phi_polynomial = self.sum_encrypted_polynomials(self.phi_polynomial, phi_part)
+    
+    # 2. and 3.
+    def send_phi_polynomial(self):
+        # phi polynomial is already encrypted
+        self.lambda_polynomial = self.phi_polynomial
+        
+        # 2.
+        if self.i == 1:         
+            # client 1 is the first to send polynomials
+            #self.broadcast(str(self.lambda_polynomial.coefficients))
+            serialized_polynomial = self.serialize_encrypted_polinomial(self.lambda_polynomial.coefficients)
+            #self.broadcast_encrypted_polinomial(serialized_polynomial)
+            self.broadcast(serialized_polynomial)
+            # waits until other client sends him the components of the final lambda polynomial, encrypted
+            #self.other_lambda_polynomials = self.deserialize_encrypted_polinomial(self.receive_encrypted_polinomial()[0])
+            print("waiting for other lambda polynomials...")
+            self.other_lambda_polynomial = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))[0]
+            #self.other_lambda_polynomials = self.receive_encrypted_polinomial()
+            #print(self.other_lambda_polynomials[0].coefficients)
+            # final polynomial should consist on the intersection of the multisets of both players
+            # TODO: since i only have 2 clients, the polynomial client 1 sends me is already the right one
+            # but i should update the final polynomial in client 1 and send it to all other clients
+        # 3.
+        elif self.i == 2: 
+            # client 2 first receives polynomials from client1 and then sends its own
+            self.other_lambda_polynomial = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))[0]
+            self.sum_lambda_phi_polynomials()
+            # TODO: change this in case of more clients
+            #self.broadcast(str(self.lambda_polynomial.coefficients))
+            self.send_lambda_polynomial()
+
+    # 3.b)
+    def sum_lambda_phi_polynomials(self):
+        # performed by client 2 only
+        # TODO: change for more clients
+        self.lambda_polynomial = self.sum_encrypted_polynomials(self.other_lambda_polynomial, self.lambda_polynomial)
+    
+    # 3.c)
+    def send_lambda_polynomial(self):
+        # performed by client 2 only
+        self.send_to_client_1(self.serialize_encrypted_polinomial(self.lambda_polynomial.coefficients))
+
+    # returns a multiset of all elements from the client multiset that belong to the intersection multiset
+    def get_intersection_multiset(self):
+        if self.i == 1:
+            self.final_intersection_polynomial = self.decrypt_polynomial(self.other_lambda_polynomial)
+            intersection_els = self.final_intersection_polynomial.get_elements(Counter(self.multiset))
+            print("final intersection multiset: " + str(intersection_els))
+
+    def private_set_intersection(self):
+        self.generate_key_pair()
+
+        # ----------------- Phase 1 ------------------
+        # initiate by player 3, then player 2, then player 1
+        self.create_polynomial()
+        input("Press enter to exchange encrypted polynomial with other players (order by 3, 2 ,1): ")
+        self.send_multiset_polynomial()
+
+        input("Press enter to choose r polynomials and compute phi polynomial (order by 3, 2 ,1): ")
+        self.choose_r_polynomials()
+        self.compute_phi_polynomial()
+
+        # --------------- Phases 2 + 3 ---------------
+        input("Press enter to exchange encrypted lambda with other players (order by 3, 2 ,1): ")
+        self.send_phi_polynomial()
+
+        # ----------------- Phase 4 ------------------
+        self.get_intersection_multiset()
+
+
+# regular version where only all clients need to perform group decryption,
+# so that no client can obtain more information other than the intersection
+# polynomial, like the decryption of fi
+class Set_Intersection_HBC_Client_Shared_Key(Client):
+    # --------------------- paillier serialization methods ---------------------
+    def serialize_shared_keys(self, public_key, private_key):  
+        toSend_json = {} 
+        toSend_json['public_key'] = {'n': self.public_key.n, 
+                                    'nSPlusOne': self.public_key.nSPlusOne,
+                                    'r': self.public_key.r,
+                                    'ns': self.public_key.ns,
+                                    'w': self.public_key.w,
+                                    'delta': self.public_key.delta,
+                                    'combineSharesConstant': self.public_key.combineSharesConstant}
+        return json.dumps(toSend_json)
+
+    def deserialize_shared_keys(self, received):  
+        key_dict = json.loads(received)
+        public_key = key_dict['public_key']
+        self.public_key = ThresholdPaillierPublicKey(
+                n=int(public_key['n']), nSPlusOne=public_key['nSPlusOne'],
+                r=public_key['r'], ns=public_key['ns'], w=public_key['w'],
+                delta=public_key['delta'], combineSharesConstant=public_key['combineSharesConstant'])
+        #private_key = key_dict['private_key']
+        #self.private_key = distributed_paillier.PaillierSharedKey()
+
+    def serialize_group_encrypted_polinomial(self, toSend):  
+        encrypted_polynomial_json = {}
+        encrypted_polynomial_json['values'] = [
+            (x.c, x.nSPlusOne, x.n) for x in toSend
+        ]
+        return json.dumps(encrypted_polynomial_json)
+
+    def deserialize_group_encrypted_polinomial(self, received):  
+        received_dict = json.loads(received)
+        encrypted_values = [
+            EncryptedNumber(int(x[0]), x[1], x[2])
+            for x in received_dict['values']
+        ]
+        return encrypted_values
+
+    def deserialize_group_encrypted_polinomials(self, received):  
+        polynomial_list = []
+        for polynomial in received:
+            polynomial_list.append(Polynomial(self.deserialize_group_encrypted_polinomial(polynomial)))
+        return polynomial_list
+
+    # --------------------- encryption and decryption methods ---------------------
+    # pk, sk: paillier key pair
+    # all players share sk and perform group decryption
+    def generate_shared_key_pair(self):
+        if self.i == 1:
+            threshold_paillier = ThresholdPaillier(1024, self.n)
+            
+            #change this
+            self.private_keys = threshold_paillier.priv_keys
+            self.public_key = threshold_paillier.pub_key
+            self.private_key = self.private_keys[0]
+
+            self.broadcast(self.serialize_shared_keys(self.public_key, self.private_key))
+        else:
+            #self.deserialize_shared_keys(self.receive_shared_keys()[0])
+            self.deserialize_shared_keys(self.receive_key()[0])
+
+    def encrypt_polynomial(self, polynomial):
+        ciphertext = []
+        for value in polynomial.coefficients:
+            ciphertext.append(self.public_key.encrypt(value))
+        return Polynomial(ciphertext)
 
     def decrypt_part_of_polynomial(self, polynomial, key_part):
         plaintext = []
@@ -275,16 +445,7 @@ class Encrypted_Set_Intersection_Client:
 
     # multiply an unencrypted polynomial and an encrypted polynomial:
     def multiply_encrypted_unencrypted_polynomials(self, polynomial1, polynomial2):
-        #return polynomial1.multiplication(polynomial2)
         return polynomial1.encrypted_multiplication(polynomial2, self.public_key)
-
-    # 1.a)
-    def create_polynomial(self):
-        # multiset should be in the format [0,1,1,2,3]
-        client_input = input("Submit a multiset in the format [a1,...,ak]: ")
-        self.multiset = ast.literal_eval(client_input)
-        self.polynomial = get_polinomial(self.multiset)
-        self.encrypted_polynomial = self.encrypt_polynomial(self.polynomial)
 
     # 1.b)
     def send_multiset_polynomial(self):
@@ -295,17 +456,14 @@ class Encrypted_Set_Intersection_Client:
             self.broadcast(self.serialize_group_encrypted_polinomial(self.encrypted_polynomial.coefficients))
             print("Waiting to receive encrypted fi from player 1 and player 2")
             #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(2))
-            #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             self.other_polynomials = self.deserialize_group_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             #self.other_polynomials.append(self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1)))
         elif self.i == 2: 
             # client 2 first receives polynomials from client1 and then sends its own
             # receives f1 from player 1
             print("Waiting to receive encrypted fi from player 1")
-            #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             self.other_polynomials = self.deserialize_group_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             print("after receiving from player 1")
-            #self.broadcast(self.serialize_encrypted_polinomial(self.encrypted_polynomial.coefficients))
             self.broadcast(self.serialize_group_encrypted_polinomial(self.encrypted_polynomial.coefficients))
             # receives f3 from player 3
             #print("Waiting to receive encrypted fi from player 2")
@@ -313,13 +471,11 @@ class Encrypted_Set_Intersection_Client:
         elif self.i == 3:
             print("Waiting to receive encrypted fi from player 1 and player 2")
             #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(2))
-            #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             self.other_polynomials = self.deserialize_group_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             #self.other_polynomials.append(self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1)))
             #print("Waiting to receive encrypted fi from player 2")
             #self.other_polynomials = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))
             print("Broadcasting polynomial to other players")
-            #self.broadcast(self.serialize_encrypted_polinomial(self.encrypted_polynomial.coefficients))
             self.broadcast(self.serialize_group_encrypted_polinomial(self.encrypted_polynomial.coefficients))         
 
     # 1.c)
@@ -344,14 +500,12 @@ class Encrypted_Set_Intersection_Client:
         if self.i == 1:         
             # client 1 is the first to send polynomials
             #self.broadcast(str(self.lambda_polynomial.coefficients))
-            #serialized_polynomial = self.serialize_encrypted_polinomial(self.lambda_polynomial.coefficients)
             serialized_polynomial = self.serialize_group_encrypted_polinomial(self.lambda_polynomial.coefficients)
             #self.broadcast_encrypted_polinomial(serialized_polynomial)
             self.broadcast(serialized_polynomial)
             # waits until other client sends him the components of the final lambda polynomial, encrypted
             #self.other_lambda_polynomials = self.deserialize_encrypted_polinomial(self.receive_encrypted_polinomial()[0])
             print("waiting for other lambda polynomials...")
-            #self.other_lambda_polynomial = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))[0]
             self.other_lambda_polynomial = self.deserialize_group_encrypted_polinomials(self.receive_encrypted_polinomial(1))[0]
             #self.other_lambda_polynomials = self.receive_encrypted_polinomial()
             #print(self.other_lambda_polynomials[0].coefficients)
@@ -361,13 +515,11 @@ class Encrypted_Set_Intersection_Client:
         # 3.
         elif self.i == 2: 
             # client 2 first receives polynomials from client1 and then sends its own
-            #self.other_lambda_polynomial = self.deserialize_encrypted_polinomials(self.receive_encrypted_polinomial(1))[0]
             self.other_lambda_polynomial = self.deserialize_group_encrypted_polinomials(self.receive_encrypted_polinomial(1))[0]
             self.sum_lambda_phi_polynomials()
             # TODO: change this in case of more clients
             #self.broadcast(str(self.lambda_polynomial.coefficients))
             self.send_lambda_polynomial()
-
 
     # 3.b)
     def sum_lambda_phi_polynomials(self):
@@ -378,15 +530,7 @@ class Encrypted_Set_Intersection_Client:
     # 3.c)
     def send_lambda_polynomial(self):
         # performed by client 2 only
-        #self.send_to_client_1(self.serialize_encrypted_polinomial(self.lambda_polynomial.coefficients))
         self.send_to_client_1(self.serialize_group_encrypted_polinomial(self.lambda_polynomial.coefficients))
-
-    # returns a multiset of all elements from the client multiset that belong to the intersection multiset
-    def get_intersection_multiset(self):
-        if self.i == 1:
-            self.final_intersection_polynomial = self.decrypt_polynomial(self.other_lambda_polynomial)
-            intersection_els = self.final_intersection_polynomial.get_elements(Counter(self.multiset))
-            print("final intersection multiset: " + str(intersection_els))
 
     def get_intersection_group_decryption_multiset(self):
         if self.i == 1:
@@ -406,7 +550,9 @@ class Encrypted_Set_Intersection_Client:
             intersection_els = self.final_intersection_polynomial.get_elements(Counter(self.multiset))
             print("final intersection multiset: " + str(intersection_els))
 
-    def private_set_intersection(self, isShared):
+    def private_set_intersection(self):
+        self.generate_shared_key_pair()
+
         # ----------------- Phase 1 ------------------
         # initiate by player 3, then player 2, then player 1
         self.create_polynomial()
@@ -422,11 +568,7 @@ class Encrypted_Set_Intersection_Client:
         self.send_phi_polynomial()
 
         # ----------------- Phase 4 ------------------
-        if isShared == False:
-            self.get_intersection_multiset()
-        else:
-            self.get_intersection_group_decryption_multiset()
-
+        self.get_intersection_group_decryption_multiset()
 
 def main():
     
@@ -447,17 +589,14 @@ def main():
 
     args = parser.parse_args()
 
-    client = Encrypted_Set_Intersection_Client(args.i, args.n, args.c)
-
     if args.command.__eq__('single_key'):
-        client.generate_key_pair()
-        client.private_set_intersection(False)
+        client = Set_Intersection_HBC_Client(args.i, args.n, args.c)
     elif args.command.__eq__('shared_key'):
-        client.generate_shared_key_pair()
-        client.private_set_intersection(True)
+        client = Set_Intersection_HBC_Client_Shared_Key(args.i, args.n, args.c)
     else:
         parser.error('wrong command')
 
+    client.private_set_intersection()
 
 if __name__ == "__main__":
     main()
