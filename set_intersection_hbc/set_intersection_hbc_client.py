@@ -244,7 +244,7 @@ class Set_Intersection_HBC_Client(Client):
     # --------------------- encrypted operation methods ---------------------
     # sum two encrypted polynomials:
     def sum_encrypted_polynomials(self, polynomial1, polynomial2):
-        return polynomial1.sum(polynomial2, self.public_key)
+        return polynomial1.sum(polynomial2)
 
     # multiply an unencrypted polynomial and an encrypted polynomial:
     def multiply_encrypted_unencrypted_polynomials(self, polynomial1, polynomial2):

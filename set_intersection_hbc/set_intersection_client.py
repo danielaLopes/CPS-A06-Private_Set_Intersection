@@ -174,10 +174,7 @@ class Set_Intersection_Client:
     def get_client_intersection_elements(self):
         if self.i == 1:
             intersection_els = self.other_lambda_polynomials[0].get_elements(Counter(self.multiset))
-            # TODO: am i supposed to have this for other clients??
-        else:
-            intersection_els = self.lambda_polynomial.get_elements(Counter(self.multiset))
-        print("final intersection multiset: " + str(intersection_els))
+            print("final intersection multiset: " + str(intersection_els))
 
     def private_set_intersection(self):
         # ----------------- Phase 1 ------------------
@@ -302,28 +299,6 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
         else:
             self.public_key = self.deserialize_public_key(self.receive_key()[0])
 
-    def test_homomorphic_sum(self):
-        if self.i == 1:
-            ciphered_num1 = self.public_key.encrypt(3, precision=1)
-            ciphered_num2 = self.public_key.encrypt(4, precision=1)
-            print("ciphered_num2: " + str(ciphered_num2))
-            ciphered_sum = ciphered_num1 + ciphered_num2
-            deciphered_sum = self.private_key.decrypt(ciphered_sum)
-            print("deciphered_sum: " + str(deciphered_sum))
-
-    def test_homomorphic_sum_diff_keys(self):
-        if self.i == 1:
-            public_key1, private_key1 = paillier.generate_paillier_keypair(n_length=2048)
-            public_key2, private_key2 = paillier.generate_paillier_keypair(n_length=2048)
-    
-            ciphered_num1 = public_key1.encrypt(3, precision=1)
-            ciphered_num2 = public_key2.encrypt(4, precision=1)
-            
-            ciphered_sum = ciphered_num1 + ciphered_num2
-            
-            deciphered_sum = private_key1.decrypt(ciphered_sum)
-            print("deciphered_sum: " + str(deciphered_sum))
-
     # returns a multiset of all elements from the client multiset that belong to the intersection multiset
     def get_client_intersection_elements(self):
         if self.i == 1:
@@ -389,6 +364,25 @@ class Encrypted_Set_Intersection_Client(Set_Intersection_Client):
             #intersection_els = self.lambda_polynomial.get_elements(Counter(self.multiset))
         #print("final intersection multiset: " + str(intersection_els))
 
+    def private_set_intersection(self):
+        self.generate_key_pair()
+
+        # ----------------- Phase 1 ------------------
+        self.create_polynomial()
+        input("Press enter to continue: ")
+        #client.send_multiset_polynomial()
+
+        input("Press enter to continue: ")
+        self.choose_r_polynomials()
+        self.compute_phi_polynomial()
+
+        # --------------- Phases 2 + 3 ---------------
+        input("Press enter to continue: ")
+        self.send_phi_polynomial()
+
+        # ----------------- Phase 4 ------------------
+        self.get_client_intersection_elements()
+
 
 def main():
     
@@ -418,17 +412,7 @@ def main():
     else:
         parser.error('wrong command')
 
-    client.test_homomorphic_sum_diff_keys()
-    #client.generate_key_pair()
-    #client.private_set_intersection()
-
-    """if client.i == 1:
-        encrypted_ply1 = client.encrypt_polynomial(Polynomial([1,2,3]))
-        encrypted_ply2 = client.encrypt_polynomial(Polynomial([2,4,3]))
-        sum_poly = client.sum_encrypted_polynomials(encrypted_ply1, encrypted_ply2)
-        decrypted_sum_poly = client.decrypt_polynomial(sum_poly)
-        print(decrypted_sum_poly)"""
-    #client.test_homomorphic_sum()
+    client.private_set_intersection()
 
 
 if __name__ == "__main__":
