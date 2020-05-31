@@ -4,8 +4,7 @@ from argparse import RawTextHelpFormatter
 from collections import Counter
 import http.client
 
-from multiset_operations import union
-from multiset_operations import intersection
+from multiset_operations import union, intersection
 
 
 def get_polinomial(multiset, x):
@@ -19,40 +18,13 @@ def get_polinomial(multiset, x):
         polinomial *= pow((x - value), multiplicity)
     return polinomial
 
-
-def coeficients(multiset):
-    coeficients = []
-    polinomial = ""
-    counter_multiset = Counter(multiset)
-    for value in counter_multiset:
-        multiplicity = counter_multiset[value]
-        polinomial += ""
-
-
-def deg(multiset):
-    return len(multiset)
-
-
-def calculate_polinomial_for_intersection(multiset, polinomial, x):
-    degree = deg(multiset)
-    sum_value = 0
-    # does a summation include the last element???
-    for i in range(0, degree):
-        # what is r, r[i] and R ???????
-        sum_value += r[i] * pow(x, i)
-        
-    return r
-
-
 def connect_ttp(operation, value):
     PORT = 8000
-    #conn = http.client.HTTPSConnection("localhost", PORT)
     conn = http.client.HTTPConnection("localhost", PORT)
 
     conn.request("GET", "/" + operation + "?value=" + value)
-    #conn.request("GET", "/", "operation=" + operation)
-    response = conn.getresponse()
 
+    response = conn.getresponse()
     response_bytes = response.read()
 
     print(response.status, response.reason)

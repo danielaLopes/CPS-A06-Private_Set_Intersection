@@ -1,3 +1,5 @@
+https://coderzcolumn.com/tutorials/python/threshold-paillier
+
 # Motivation and Use Cases
 ## Set-Intersection Problem
 * **Social Networking:** Finding common interests or common friends with people that are not our friends.
@@ -8,32 +10,21 @@
 # Implementation
 ## Attacker model
 * honest-but-curious players (HBC): even if c < n players collude and disclose their information, gains information about other players input other than what can be deduced by the result of the protocol. A Trusted Third Party receives the inputs of all parties and outputs the result of the defined function.
-* PPT-bounded adversary model: probabilistic polynomial-time machines
 
 ## Techniques and Tools
 * Polynomial Representation
-* Multiset Operations with Trusted-Third-Party
+* Multiset Operations with Polynomial Representation
 
 ### Multiset Operations
 * Union
 * Intersection
 
 ## Modes and Algorithms
-* **Set-Intersection-HBC:** 
-    Considering the number of players n = 2 and c = 1 of which are dishonestly colluding.
-    1. a) Two players, each has a private input set of size k. Both players share secret key sk, to which pk is the public key to the homomorphic cryptosystem.
-    1. b) Each player calculates polinomial of its private input multiset and sends its encryption to the other player and receives the player's encrypted polynomial. 
-    1. c) Chooses c + 1 polynomials r from a set of all polynomials with degree between 0 and k with coefficients from R.
-    1. d) Calculates the homomorphic multiplication operation of the encrypted polynomials it has received: f * r
-    2. Player 1 sends the encrypted f * r polynomial to Player 2
-    3. 
-
-* **Shuffle Protocol:** all n players learn the joint n multisets ??? See this better
-
-
-# Possible Extensions
-* Attacker model for malicious players by integrating zero-knowledge proofs.
-
+* [Set-Intersection with 2 clients and a Trusted Third Party](#execution-with-trusted-third-party)
+* Set-Intersection HBC with 2 clients no Trusted Third Party:
+    * [without colluding players](#without-colluding-players)
+    * [with colluding players but no shared key (player 1 performs decryption)](#with-colluding-players-but-no-shared-key)
+    * [with colluding players and shared key for group decryption](#with-colluding-players-and-shared-key)
 
 
 # Execution with Trusted Third Party
@@ -72,13 +63,14 @@ python application.py local_union "[0,1,1,2,3]"  "[0,1,1,4,5]" "0"
 python application.py local_intersection "[0,1,1,2,3]"  "[0,1,1,4,5]" "0"
 ```
 
-
 # Execution of Set Intersection HBC algorithm
 Every different entity must be executed in a different terminal:
 * 2 clients
 
 ## Execute a client
 Client 2 should be the first to be executed and submitted input multiset, then it waits for client 1 to start protocol
+
+### Without colluding players
 ```
 cd set_intersection_hbc/
 python set_intersection_client.py non_encrypted <i> <n> <c>
@@ -91,31 +83,20 @@ cd set_intersection_hbc/
 python set_intersection_client.py encrypted <i> <n> <c>
 python set_intersection_client.py encrypted 1 2 0
 python set_intersection_client.py encrypted 2 2 0
-
-python set_intersection_three_clients.py encrypted 1 2 0
-python set_intersection_three_clients.py encrypted 2 2 0
-
-python set_intersection_three_clients.py encrypted 1 3 2
-python set_intersection_three_clients.py encrypted 2 3 2
-python set_intersection_three_clients.py encrypted 3 3 2
 ```
 
-
-# Samples
-## UNION
+### With colluding players but no shared key
 ```
-"[0,1,1,2,3]" "[0,1,1,4,5]" "0" => 0, so the value "0" belongs to the UNION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "1" => 0, so the value "1" belongs to the UNION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "2" => 0, so the value "2" belongs to the UNION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "6" => 540000, so the value "6" does not belong to the UNION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "-1" => 5760, so the value "-1" does not belong to the UNION
+python set_intersection_hbc_client.py single_key 1 2 0
+python set_intersection_hbc_client.py single_key 2 2 0
 ```
 
-## INTERSECTION
+### With colluding players and shared key
 ```
-"[0,1,1,2,3]" "[0,1,1,4,5]" "0" => 0, so the value "0" belongs to the INTERSECTION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "1" => 0, so the value "1" belongs to the INTERSECTION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "2" => -12, so the value "2" does not belong to the INTERSECTION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "6" => 5697900, so the value "6" does not belong to the INTERSECTION
-"[0,1,1,2,3]" "[0,1,1,4,5]" "-1" => 124416, so the value "-1" does not belong to the INTERSECTION
+python set_intersection_hbc_client.py shared_key 1 2 0
+python set_intersection_hbc_client.py shared_key 2 2 0
+
+python set_intersection_hbc_client.py encrypted 1 3 2
+python set_intersection_hbc_client.py encrypted 2 3 2
+python set_intersection_hbc_client.py encrypted 3 3 2
 ```

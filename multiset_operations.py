@@ -1,7 +1,9 @@
 from collections import Counter
 import numpy as np
 import secrets
-
+import phe
+from phe import paillier
+from threshold_paillier import EncryptedNumber
 
 class Polynomial:
     
@@ -50,6 +52,34 @@ class Polynomial:
 
         return Polynomial(res)
 
+    def encrypted_sum(self, other, public_key):
+        len_self = len(self.coefficients)
+        len_other = len(other.coefficients)
+
+        max_len = max(len_self, len_other)
+
+        res = []
+        zero = public_key.encrypt(0)
+        for i in range(0, max_len):
+            res.append(zero)
+
+        # to handle polynomials of the same size
+        if len_self == len_other:
+            for i in range(0, max_len):   
+                res[i] += self.coefficients[i] + other.coefficients[i]
+        elif len_self == max_len:
+            for i in range(0, len_other):   
+                res[i] += self.coefficients[i] + other.coefficients[i]
+            for i in range(len_other, len_self):   
+                res[i] += self.coefficients[i]
+        else:
+            for i in range(0, len_self):   
+                res[i] += self.coefficients[i] + other.coefficients[i]
+            for i in range(len_self, len_other):   
+                res[i] += other.coefficients[i]  
+
+        return Polynomial(res)
+
     def multiplication(self, other):       
         len_self = len(self.coefficients)
         len_other = len(other.coefficients)
@@ -65,6 +95,28 @@ class Polynomial:
                 res[res_index] += self.coefficients[i] * other.coefficients[j]
 
         return Polynomial(res)
+
+    def encrypted_multiplication(self, other, public_key):       
+        len_self = len(self.coefficients)
+        len_other = len(other.coefficients)
+        degree = len_self + len_other - 1
+
+        res = []
+        zero = public_key.encrypt(0)
+        for i in range(0, degree):
+            res.append(zero)
+
+        for i in range(0, len_self):
+            for j in range(0, len_other):      
+                res_index = i + j
+
+                if isinstance(self.coefficients[i], EncryptedNumber):
+                    res[res_index] += self.coefficients[i] * other.coefficients[j]
+                elif isinstance(self.coefficients[j], EncryptedNumber):
+                    res[res_index] += self.coefficients[j] * other.coefficients[i]
+
+        return Polynomial(res)
+
 
     # performs the division of two polynomials and returns the remainder
     def division(self, other): 
@@ -129,9 +181,27 @@ class Polynomial:
 
                     if remainder == 0.0:
                         res.append(value)
+        
+        return res
 
-        return Counter(res)
+    # gets list of elements from a given multiset that belong to a polynomial representation of a set, checking if it's a root
+    # does not include multiplicity
+    def get_elements_by_roots(self, multiset):
+        res = []
+        np.seterr(divide='ignore', invalid='ignore')
 
+        for value in multiset:      
+            print("Testing if " + str(value) + " is in intersection multiset")    
+            if self.check_if_root(value) == 0:
+                res.append(value)
+            
+        return res
+
+    def check_if_root(self, value):
+        res = 0
+        for i in range(0, len(self.coefficients)):
+            res += self.coefficients[i] * pow(value, i)
+        return res
 
 # determines if a value x is in the UNION of two multisets
 def union(multiset1, multiset2, x):
