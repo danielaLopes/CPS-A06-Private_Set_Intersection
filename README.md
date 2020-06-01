@@ -1,5 +1,3 @@
-https://coderzcolumn.com/tutorials/python/threshold-paillier
-
 # Motivation and Use Cases
 ## Set-Intersection Problem
 * **Social Networking:** Finding common interests or common friends with people that are not our friends.
@@ -21,7 +19,7 @@ https://coderzcolumn.com/tutorials/python/threshold-paillier
 
 ## Modes and Algorithms
 * [Set-Intersection with 2 clients and a Trusted Third Party](#execution-with-trusted-third-party)
-* Set-Intersection HBC with 2 clients no Trusted Third Party:
+* Set-Intersection HBC with 2 clients and no Trusted Third Party:
     * [without colluding players](#without-colluding-players)
     * [with colluding players but no shared key (player 1 performs decryption)](#with-colluding-players-but-no-shared-key)
     * [with colluding players and shared key for group decryption](#with-colluding-players-and-shared-key)
@@ -85,16 +83,16 @@ python set_intersection_client.py encrypted 2 2 0
 
 ### With colluding players but no shared key
 ```
+cd set_intersection_hbc/
 python set_intersection_hbc_client.py single_key 1 2 0
 python set_intersection_hbc_client.py single_key 2 2 0
 ```
 
 ### With colluding players and shared key
+[Threshold Paillier](https://coderzcolumn.com/tutorials/python/threshold-paillier)
 ```
+cd set_intersection_hbc/
+python set_intersection_hbc_key_server.py
 python set_intersection_hbc_client.py shared_key 1 2 0
 python set_intersection_hbc_client.py shared_key 2 2 0
-
-python set_intersection_hbc_client.py encrypted 1 3 2
-python set_intersection_hbc_client.py encrypted 2 3 2
-python set_intersection_hbc_client.py encrypted 3 3 2
 ```
