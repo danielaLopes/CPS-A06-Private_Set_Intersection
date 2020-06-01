@@ -142,10 +142,8 @@ class Polynomial:
         for value in multiset:      
             print("Testing if " + str(value) + " is in intersection multiset")    
             multiplicity = multiset[value] 
-            if value <= 0:
-                divisor_polynomial = Polynomial([value, 1])
-            else:
-                divisor_polynomial = Polynomial([-value, 1])
+
+            divisor_polynomial = Polynomial([-value, 1])
             
             # any polinomial in the format [0, x, y, z, ...] is divisible by 0
             if value == 0:
@@ -274,10 +272,7 @@ def get_polinomial(multiset):
     for value in counter_multiset:
         multiplicity = counter_multiset[value] 
         # [x^0, x^1] 
-        if value <= 0:
-            polynomial = Polynomial([value, 1])
-        else:
-            polynomial = Polynomial([-value, 1])
+        polynomial = Polynomial([-value, 1])
 
         for i in range(0, multiplicity):
             multiset_polinomials.append(polynomial)
