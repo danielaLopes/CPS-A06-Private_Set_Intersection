@@ -492,7 +492,7 @@ class Set_Intersection_HBC_Client_Shared_Key(Client):
     def combine_shares(self, shares):
         final_coefficients = []
 
-        for i in range(0, len(self.other_lambda_polynomial.coefficients)):
+        for i in range(0, len(self.final_polynomial.coefficients)):
             final_coefficients.append(combineShares([shares[0].coefficients[i], shares[1].coefficients[i]], 
                     self.public_key.w, self.public_key.delta, self.public_key.combineSharesConstant, 
                     self.public_key.nSPlusOne, self.public_key.n, self.public_key.ns, [1,2]))
